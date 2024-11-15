@@ -19,7 +19,7 @@
 const DEBUG = false; // Don't turn this on If you don't know what you're doing
 
 const PLATFORM_CONFIG = {
-  preferredPlatform: 'weidian', // 'taobao' or 'weidian'
+  preferredPlatform: 'weidian', // 'taobao' or 'weidian' - If both of the platform links found (taobao and weidian) which one to prioritize?
   platforms: {
     taobao: {
       baseUrl: 'https://www.jadeship.com/item/taobao/',
