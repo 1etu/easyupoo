@@ -16,7 +16,7 @@
  * 4. Report bugs and issues on GitHub
  */
 
-const DEBUG = true; // Don't turn this on If you don't know what you're doing
+const DEBUG = false; // Don't turn this on If you don't know what you're doing
 
 const PLATFORM_CONFIG = {
   preferredPlatform: 'weidian', // 'taobao' or 'weidian'
