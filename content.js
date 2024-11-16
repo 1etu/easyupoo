@@ -20,6 +20,8 @@ const DEBUG = false; // Don't turn this on If you don't know what you're doing
 
 const PLATFORM_CONFIG = {
   preferredPlatform: 'weidian', // 'taobao' or 'weidian'
+  preferredCurrency: 'usd',
+  supportedCurrencies: ['cny', 'usd', 'eur', 'gbp', 'try'],
   platforms: {
     taobao: {
       baseUrl: 'https://www.jadeship.com/item/taobao/',
@@ -52,18 +54,75 @@ const PLATFORM_CONFIG = {
   }
 };
 
-// Don't touch this
 const CACHE_CONFIG = {
   version: '1.0.0',
   maxAge: 7 * 24 * 60 * 60 * 1000,
   maxItems: 1000,
 };
 
-// Add this near the top where PLATFORM_CONFIG is defined
 const BOOKMARK_CONFIG = {
   version: '1.0.0',
   maxItems: 100
 };
+
+const CURRENCY_CACHE = {
+  version: '1.0.0',
+  rates: null,
+  lastUpdate: null,
+  updateInterval: 1 * 60 * 60 * 1000,
+};
+
+async function fetchExchangeRates() {
+  if (CURRENCY_CACHE.rates && 
+      CURRENCY_CACHE.lastUpdate && 
+      Date.now() - CURRENCY_CACHE.lastUpdate < CURRENCY_CACHE.updateInterval) {
+    return CURRENCY_CACHE.rates;
+  }
+
+  const urls = [
+    'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cny.json',
+    'https://latest.currency-api.pages.dev/v1/currencies/cny.json'
+  ];
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) continue;
+      
+      const data = await response.json();
+      CURRENCY_CACHE.rates = data.cny;
+      CURRENCY_CACHE.lastUpdate = Date.now();
+      return CURRENCY_CACHE.rates;
+    } catch (error) {
+      console.error(`Error fetching rates from ${url}:`, error);
+    }
+  }
+  
+  throw new Error('Failed to fetch exchange rates from all sources');
+}
+
+function convertCurrency(amount, fromCurrency, toCurrency) {
+  if (!CURRENCY_CACHE.rates) return amount;
+  
+  const rate = CURRENCY_CACHE.rates[toCurrency.toLowerCase()];
+  if (!rate) return amount;
+
+  const converted = amount * rate;
+  return Number(converted.toFixed(2));
+}
+
+function formatCurrency(amount, currency) {
+  const symbols = {
+    usd: '$',
+    eur: '€',
+    gbp: '£',
+    try: '₺',
+    cny: '¥'
+  };
+
+  const symbol = symbols[currency.toLowerCase()] || '';
+  return `${symbol}${amount}`;
+}
 
 /**
  * A persistent caching system for Chrome extension that stores data in chrome.storage.local
@@ -531,6 +590,50 @@ async function fetchProductDetails(productLink) {
 }
 
 /**
+ * Calculates the final price including agent service fees.
+ * Different agents have different markup rates:
+ * - Superbuy: 2.38% fixed markup
+ * - CSSBuy: 2% service fee
+ * - AllChinaBuy: 4% service fee
+ * - Others: 3% default markup
+ * 
+ * Note: These are basic estimates and actual costs may vary based on:
+ * - Order value tiers
+ * - Additional service fees
+ * - Shipping costs
+ * - Payment processing fees
+ * 
+ * @param {number} price - The original price in CNY
+ * @param {string} agent - The agent name ('superbuy', 'cssbuy', 'allchinabuy')
+ * @returns {number} The price with agent fee applied
+ * 
+ * @example
+ * // Returns 102.38
+ * calculateAgentFee(100, 'superbuy')
+ * 
+ * // Returns 102
+ * calculateAgentFee(100, 'cssbuy')
+ * 
+ * // Returns 104
+ * calculateAgentFee(100, 'allchinabuy')
+ */
+function calculateAgentFee(price, agent) {
+  switch (agent.toLowerCase()) {
+    case 'superbuy':
+      return price * 1.0238;
+      
+    case 'cssbuy':
+      return price * 1.02;
+      
+    case 'allchinabuy':
+      return price * 1.04;
+      
+    default:
+      return price * 1.03;
+  }
+}
+
+/**
  * Processes a product element by adding an interactive price badge that appears on hover.
  * The price badge fetches and displays product details asynchronously.
  * 
@@ -573,7 +676,31 @@ async function processProduct(product) {
         currentProductDetails = productDetails;
 
         if (isHovered) {
-          badge.textContent = productDetails.price;
+          if (productDetails.price !== 'N/A') {
+            const priceNumber = parseFloat(productDetails.price.replace(/[^0-9.]/g, ''));
+            if (!isNaN(priceNumber)) {
+              // First apply agent fee
+              const priceWithFee = calculateAgentFee(priceNumber, PLATFORM_CONFIG.preferredAgent);
+              
+              // Then convert to preferred currency
+              const rates = await fetchExchangeRates();
+              const convertedPrice = convertCurrency(priceWithFee, 'cny', PLATFORM_CONFIG.preferredCurrency);
+              
+              // Format with currency symbol
+              badge.textContent = formatCurrency(convertedPrice, PLATFORM_CONFIG.preferredCurrency);
+              
+              // If in debug mode, show original price for comparison
+              if (DEBUG) {
+                const originalConverted = convertCurrency(priceNumber, 'cny', PLATFORM_CONFIG.preferredCurrency);
+                badge.textContent += ` (${formatCurrency(originalConverted, PLATFORM_CONFIG.preferredCurrency)})`;
+              }
+            } else {
+              badge.textContent = productDetails.price;
+            }
+          } else {
+            badge.textContent = productDetails.price;
+          }
+          
           retryButton.style.display = productDetails.price === 'N/A' ? 'inline-block' : 'none';
           quickBuyButton.style.display = productDetails.link ? 'inline-block' : 'none';
         }
@@ -738,22 +865,27 @@ async function loadPreferences() {
     if (result.preferences) {
       PLATFORM_CONFIG.preferredPlatform = result.preferences.platform || PLATFORM_CONFIG.preferredPlatform;
       PLATFORM_CONFIG.preferredAgent = result.preferences.agent || PLATFORM_CONFIG.preferredAgent;
+      PLATFORM_CONFIG.preferredCurrency = result.preferences.currency || PLATFORM_CONFIG.preferredCurrency;
     }
+    // Pre-fetch exchange rates
+    await fetchExchangeRates();
   } catch (error) {
     console.error('Error loading preferences:', error);
   }
 }
 
-async function savePreferences(platform, agent) {
+async function savePreferences(platform, agent, currency) {
   try {
     await chrome.storage.local.set({
       preferences: {
         platform,
-        agent
+        agent,
+        currency
       }
     });
     PLATFORM_CONFIG.preferredPlatform = platform;
     PLATFORM_CONFIG.preferredAgent = agent;
+    PLATFORM_CONFIG.preferredCurrency = currency;
   } catch (error) {
     console.error('Error saving preferences:', error);
   }
@@ -1064,12 +1196,40 @@ function showSettingsPopup() {
     agentSelect.appendChild(option);
   });
 
+  const currencyGroup = document.createElement('div');
+  currencyGroup.className = 'settings-group';
+  
+  const currencyLabel = document.createElement('label');
+  currencyLabel.className = 'settings-label';
+  currencyLabel.textContent = 'Preferred Currency';
+  
+  const currencySelect = document.createElement('select');
+  currencySelect.className = 'settings-select';
+  
+  const currencies = [
+    { value: 'usd', label: 'USD ($)' },
+    { value: 'eur', label: 'EUR (€)' },
+    { value: 'gbp', label: 'GBP (£)' },
+    { value: 'try', label: 'TRY (₺)' }
+  ];
+
+  currencies.forEach(currency => {
+    const option = document.createElement('option');
+    option.value = currency.value;
+    option.textContent = currency.label;
+    option.selected = currency.value === PLATFORM_CONFIG.preferredCurrency;
+    currencySelect.appendChild(option);
+  });
+
   platformGroup.appendChild(platformLabel);
   platformGroup.appendChild(platformSelect);
   agentGroup.appendChild(agentLabel);
   agentGroup.appendChild(agentSelect);
+  currencyGroup.appendChild(currencyLabel);
+  currencyGroup.appendChild(currencySelect);
   generalPanel.appendChild(platformGroup);
   generalPanel.appendChild(agentGroup);
+  generalPanel.appendChild(currencyGroup);
 
   const cachePanel = document.createElement('div');
   cachePanel.className = 'settings-panel';
@@ -1234,7 +1394,7 @@ function showSettingsPopup() {
   };
 
   saveButton.addEventListener('click', async () => {
-    await savePreferences(platformSelect.value, agentSelect.value);
+    await savePreferences(platformSelect.value, agentSelect.value, currencySelect.value);
     closePopup();
   });
 
