@@ -679,17 +679,12 @@ async function processProduct(product) {
           if (productDetails.price !== 'N/A') {
             const priceNumber = parseFloat(productDetails.price.replace(/[^0-9.]/g, ''));
             if (!isNaN(priceNumber)) {
-              // First apply agent fee
               const priceWithFee = calculateAgentFee(priceNumber, PLATFORM_CONFIG.preferredAgent);
-              
-              // Then convert to preferred currency
               const rates = await fetchExchangeRates();
               const convertedPrice = convertCurrency(priceWithFee, 'cny', PLATFORM_CONFIG.preferredCurrency);
               
-              // Format with currency symbol
               badge.textContent = formatCurrency(convertedPrice, PLATFORM_CONFIG.preferredCurrency);
               
-              // If in debug mode, show original price for comparison
               if (DEBUG) {
                 const originalConverted = convertCurrency(priceNumber, 'cny', PLATFORM_CONFIG.preferredCurrency);
                 badge.textContent += ` (${formatCurrency(originalConverted, PLATFORM_CONFIG.preferredCurrency)})`;
