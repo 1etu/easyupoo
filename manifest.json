@@ -3,7 +3,7 @@
   "name": "easYupoo",
   "author": "1etu",
   "version": "1.0",
-  "description": "A Google Extension to make Yupoo searching easier.",
+  "description": "A Google Extension to make Yupoo searching easier. Powered by Jadeship.com",
   "icons": {
     "48": "icon.png",
     "128": "icon.png"
