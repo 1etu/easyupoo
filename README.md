@@ -1,4 +1,4 @@
-This project is made for the community. There's a high chance of this not meeting your expectations.
+This project is made for the community. Powered by Jadeship.com
 
 # Building on your own
 
