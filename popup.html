@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      width: 300px;  /* Reduced width for extension popup */
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+      background-color: white;
+      margin: 0;
+      box-sizing: border-box;
+    }
+
+    .logo {
+      width: 80px;  /* Smaller logo for popup */
+      height: auto;
+      margin-bottom: 15px;
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    .credits {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      line-height: 1.5;
+      animation: slideUp 0.5s ease-out;
+    }
+
+    a {
+      color: #e74c3c;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    a:hover {
+      color: #c0392b;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { 
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <img src="static/jadeship.png" alt="Jadeship Logo" class="logo">
+  <div class="credits">
+    Made by <a href="https://github.com/1etu" target="_blank">etulastrada</a><br>
+    Powered by <a href="https://jadeship.com" target="_blank">Jadeship</a>
+  </div>
+</body>
+</html>

@@ -50,6 +50,25 @@ const PLATFORM_CONFIG = {
         }
         return `https://www.cssbuy.com/item-${productId}.html`;
       }
+    },
+    cnfans: {
+      baseUrl: 'https://cnfans.com/product/',
+      formatUrl: (platform, productId) => {
+        return `https://cnfans.com/product/?shop_type=${platform}&id=${productId}`;
+      }
+    },
+    mulebuy: {
+      baseUrl: 'https://mulebuy.com/product/',
+      formatUrl: (platform, productId) => {
+        return `https://cnfans.com/product/?shop_type=${platform}&id=${productId}`;
+      }
+    },
+    hoobuy: {
+      baseUrl: 'https://hoobuy.com/product/',
+      formatUrl: (platform, productId) => {
+        const platformId = platform === 'taobao' ? '1' : '2';
+        return `https://hoobuy.com/product/${platformId}/${productId}`;
+      }
     }
   }
 };
@@ -364,6 +383,18 @@ function initializeUI() {
   buttonContainer.style.display = "flex";
   buttonContainer.style.gap = "8px";
   buttonContainer.style.zIndex = "10000";
+
+  if (window.location.href.includes('/albums/')) {
+    const sizeChartButton = document.createElement("div");
+    sizeChartButton.textContent = "📏";  // Or use a chart icon
+    sizeChartButton.style.backgroundColor = "#ffffff";
+    sizeChartButton.style.padding = "8px";
+    sizeChartButton.style.borderRadius = "50%";
+    sizeChartButton.style.cursor = "pointer";
+    sizeChartButton.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
+    sizeChartButton.addEventListener('click', showSizeChart);
+    buttonContainer.appendChild(sizeChartButton);
+  }
 
   const bookmarkButton = document.createElement("div");
   bookmarkButton.textContent = "🔖";
@@ -682,7 +713,7 @@ async function processProduct(product) {
               const priceWithFee = calculateAgentFee(priceNumber, PLATFORM_CONFIG.preferredAgent);
               const rates = await fetchExchangeRates();
               const convertedPrice = convertCurrency(priceWithFee, 'cny', PLATFORM_CONFIG.preferredCurrency);
-              
+
               badge.textContent = formatCurrency(convertedPrice, PLATFORM_CONFIG.preferredCurrency);
               
               if (DEBUG) {
@@ -736,7 +767,7 @@ async function processProduct(product) {
         const agent = PLATFORM_CONFIG.agents[PLATFORM_CONFIG.preferredAgent];
         
         let buyUrl;
-        if (PLATFORM_CONFIG.preferredAgent === 'cssbuy') {
+        if (agent.formatUrl) {
           const productId = currentProductDetails.platform === 'weidian' 
             ? extractWeidianId(`https://${currentProductDetails.link}`)
             : extractTaobaoId(`https://${currentProductDetails.link}`);
@@ -862,7 +893,7 @@ async function loadPreferences() {
       PLATFORM_CONFIG.preferredAgent = result.preferences.agent || PLATFORM_CONFIG.preferredAgent;
       PLATFORM_CONFIG.preferredCurrency = result.preferences.currency || PLATFORM_CONFIG.preferredCurrency;
     }
-    // Pre-fetch exchange rates
+
     await fetchExchangeRates();
   } catch (error) {
     console.error('Error loading preferences:', error);
@@ -1035,6 +1066,39 @@ function showSettingsPopup() {
       border-color: #2563eb;
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
+
+     .settings-credits {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .settings-credits img {
+    width: 60px;
+    height: auto;
+    opacity: 0.9;
+  }
+
+  .settings-credits-text {
+    color: #6b7280;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  .settings-credits a {
+    color: #2563eb;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .settings-credits a:hover {
+    color: #1d4ed8;
+  }
+  
     
     .cache-stats {
       background: #f9fafb;
@@ -1216,6 +1280,24 @@ function showSettingsPopup() {
     currencySelect.appendChild(option);
   });
 
+  const creditsSection = document.createElement('div');
+  creditsSection.className = 'settings-credits';
+
+  const logo = document.createElement('img');
+  logo.src = chrome.runtime.getURL('static/jadeship.png');
+  logo.alt = 'Jadeship Logo';
+
+  const creditsText = document.createElement('div');
+  creditsText.className = 'settings-credits-text';
+  creditsText.innerHTML = `
+    Made by <a href="https://github.com/1etu" target="_blank">etulastrada</a><br>
+    Powered by <a href="https://jadeship.com" target="_blank">Jadeship</a>
+  `;
+
+  creditsSection.appendChild(logo);
+  creditsSection.appendChild(creditsText);
+
+
   platformGroup.appendChild(platformLabel);
   platformGroup.appendChild(platformSelect);
   agentGroup.appendChild(agentLabel);
@@ -1369,6 +1451,7 @@ function showSettingsPopup() {
   popup.appendChild(generalPanel);
   popup.appendChild(cachePanel);
   popup.appendChild(buttonContainer);
+  popup.appendChild(creditsSection);
   overlay.appendChild(popup);
   document.body.appendChild(overlay);
 
