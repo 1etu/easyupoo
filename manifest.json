@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "easYupoo",
   "author": "1etu",
-  "version": "1.0",
-  "description": "A Google Extension to make Yupoo searching easier. Powered by Jadeship.com",
+  "version": "1.0.0",
+  "description": "A Google Extension to make Yupoo searching easier, powered by Jadeship.",
   "icons": {
     "48": "icon.png",
     "128": "icon.png"

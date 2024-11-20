@@ -1,67 +1,379 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <style>
     body {
-      width: 300px;  /* Reduced width for extension popup */
-      padding: 20px;
+      width: 360px;
+      height: 520px;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #ffffff;
+      color: #1f2937;
+    }
+
+    .loading-screen {
+      position: fixed;
+      inset: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-family: Arial, sans-serif;
-      background-color: white;
-      margin: 0;
-      box-sizing: border-box;
+      background: #ffffff;
+      opacity: 1;
+      transition: opacity 0.3s ease-out;
+      z-index: 100;
     }
 
-    .logo {
-      width: 80px;  /* Smaller logo for popup */
+    .loading-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-screen img {
+      width: 80px;
       height: auto;
-      margin-bottom: 15px;
-      animation: fadeIn 0.5s ease-in;
+      margin-bottom: 16px;
     }
 
     .credits {
+      font-size: 13px;
       text-align: center;
-      color: #666;
-      font-size: 14px;
       line-height: 1.5;
-      animation: slideUp 0.5s ease-out;
+      color: #6b7280;
     }
 
-    a {
-      color: #e74c3c;
+    .credits a {
+      color: #2563eb;
       text-decoration: none;
-      transition: color 0.2s ease;
     }
 
-    a:hover {
-      color: #c0392b;
+    .credits a:hover {
+      text-decoration: underline;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    .main-content {
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.3s ease-out;
+      height: 100%;
     }
 
-    @keyframes slideUp {
-      from { 
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to { 
-        opacity: 1;
-        transform: translateY(0);
-      }
+    .main-content.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .loading-screen[style*="display: none"] + .main-content {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .settings-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      padding: 20px;
+      margin: 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .settings-subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      margin-left: 8px; 
+    }
+
+    .settings-tabs {
+      display: flex;
+      padding: 12px 16px;
+      gap: 8px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .tab-button {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: #6b7280;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .tab-button.active {
+      color: #2563eb;
+      background: #eff6ff;
+    }
+
+
+    .tab-button:hover:not(.active) {
+      background: #f3f4f6;
+    }
+
+    .content {
+      padding: 20px;
+      overflow-y: auto;
+      height: calc(100% - 165px);
+    }
+
+    .settings-group {
+      margin-bottom: 20px;
+    }
+
+    .settings-label {
+      display: block;
+      font-size: 13px;
+      color: #4b5563;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .custom-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+      background: #ffffff;
+      cursor: pointer;
+      appearance: none;
+      color: #111827;
+      transition: all 0.2s ease;
+    }
+
+    .custom-select:hover {
+      border-color: #d1d5db;
+    }
+
+    .custom-select:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .button-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px;
+      background: #ffffff;
+      border-top: 1px solid #f3f4f6;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .button-primary {
+      background: #2563eb;
+      color: white;
+      border: none;
+    }
+
+    .button-primary:hover {
+      background: #1d4ed8;
+    }
+
+    .button-secondary {
+      background: #ffffff;
+      color: #4b5563;
+      border: 1px solid #e5e7eb;
+    }
+
+    .button-secondary:hover {
+      background: #f9fafb;
+    }
+
+    .select-wrapper {
+      position: relative;
+    }
+
+    .select-wrapper::after {
+      content: '';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 10px;
+      height: 10px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd' /%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    .cache-stats {
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 8px;
+      margin: 16px;
+    }
+
+    .cache-stat-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .cache-stat-item:last-child {
+      border-bottom: none;
+    }
+
+    .cache-stat-value {
+      color: #2563eb;
+      font-weight: 500;
+    }
+
+    .cache-actions {
+      padding: 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .cache-button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      background: white;
+      color: #374151;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .cache-button:hover {
+      background: #f3f4f6;
+    }
+
+    .cache-button.danger {
+      color: #dc2626;
+      border-color: #dc2626;
+    }
+
+    .cache-button.danger:hover {
+      background: #fee2e2;
+    }
+
+    .preference-item {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .preference-checkbox {
+      margin-right: 12px;
+    }
+
+    .preference-label {
+      font-size: 14px;
+      color: #374151;
+    }
+
+    .tab-content {
+      display: none;  /* Hide all tabs by default */
+    }
+
+    .tab-content.active {
+      display: block;  /* Show only active tab */
     }
   </style>
 </head>
 <body>
-  <img src="static/jadeship.png" alt="Jadeship Logo" class="logo">
-  <div class="credits">
-    Made by <a href="https://github.com/1etu" target="_blank">etulastrada</a><br>
-    Powered by <a href="https://jadeship.com" target="_blank">Jadeship</a>
+  <div class="loading-screen">
+    <img src="static/jadeship.png" alt="Jadeship Logo">
+    <div class="credits">
+      Made by <a href="https://github.com/1etu" target="_blank">etulastrada</a><br>
+      Powered by <a href="https://jadeship.com" target="_blank">Jadeship</a>
+    </div>
   </div>
+
+  <div class="main-content">
+    <h1 class="settings-title">Settings</h1>
+    <div class="settings-tabs">
+      <button class="tab-button active" data-tab="general">General</button>
+      <button class="tab-button" data-tab="preferences">Preferences</button>
+      <button class="tab-button" data-tab="cache">Cache</button>
+    </div>
+
+    <div class="content">
+      <div class="tab-content active" id="general">
+        <div class="settings-group">
+          <label class="settings-label">Preferred Platform</label>
+          <div class="select-wrapper">
+            <select class="custom-select" id="platform-select">
+              <option value="weidian">Weidian</option>
+              <option value="taobao">Taobao</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">Preferred Agent</label>
+          <div class="select-wrapper">
+            <select class="custom-select" id="agent-select">
+              <option value="superbuy">Superbuy</option>
+              <option value="cssbuy">CSSBuy</option>
+              <option value="allchinabuy">AllChinaBuy</option>
+              <option value="cnfans">CNFans</option>
+              <option value="mulebuy">MuleBuy</option>
+              <option value="hoobuy">HooBuy</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">Preferred Currency</label>
+          <div class="select-wrapper">
+            <select class="custom-select" id="currency-select">
+              <option value="usd">USD ($)</option>
+              <option value="eur">EUR (€)</option>
+              <option value="gbp">GBP (£)</option>
+              <option value="try">TRY (₺)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="preferences">
+        <div class="preference-item">
+          <input type="checkbox" id="dark-mode" class="preference-checkbox">
+          <label for="dark-mode" class="preference-label">Use always in dark mode</label>
+        </div>
+      </div>
+
+      <div class="tab-content" id="about">
+      </div>
+
+      <div class="tab-content" id="cache">
+        <div class="cache-stats">
+        </div>
+        <div class="cache-actions">
+          <button class="cache-button" id="export-cache">Export Cache</button>
+          <button class="cache-button" id="import-cache">Import Cache</button>
+          <button class="cache-button danger" id="clear-cache">Clear Cache</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="button-container">
+      <button class="button button-secondary" id="cancel-button">Cancel</button>
+      <button class="button button-primary" id="save-button">Save Changes</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>

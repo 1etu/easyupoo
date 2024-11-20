@@ -17,6 +17,7 @@
  */
 
 const DEBUG = false; // Don't turn this on If you don't know what you're doing
+const IS_DARK_MODE_EXPERIMENTAL = true // Don't turn this on before release
 
 const PLATFORM_CONFIG = {
   preferredPlatform: 'weidian', // 'taobao' or 'weidian'
@@ -32,7 +33,7 @@ const PLATFORM_CONFIG = {
       priority: 2
     }
   },
-
+ 
   preferredAgent: "superbuy",
   agents: {
     superbuy: {
@@ -89,6 +90,54 @@ const CURRENCY_CACHE = {
   rates: null,
   lastUpdate: null,
   updateInterval: 1 * 60 * 60 * 1000,
+};
+
+const DARK_MODE_STYLES = {
+  body: {
+    backgroundColor: '#1A1A1D',
+    color: '#FFFFFF'
+  },
+  '.none_select.header__wrap': {
+    backgroundColor: '#000000'
+  },
+  '.showheader__headerWrap': {
+    backgroundColor: '#1A1A1D',
+    color: '#FFFFFF'
+  },
+  '.broadcastbar__wrap': {
+    backgroundColor: '#1A1A1D',
+    color: '#FFFFFF',
+    borderTop: '1px solid #2A2A2D'
+  },
+  '.pagination__button, .pagination__number, .pagination__number.pagination__active': {
+    backgroundColor: '#1A1A1D',
+    color: '#FFFFFF'
+  },
+  '.showheader__menuslink.showheader__active': {
+    backgroundColor: '#1A1A1D',
+    color: 'white'
+  },
+  '.showheader__category': {
+    backgroundColor: '#1A1A1D',
+    background: '#1A1A1D',
+    color: 'white'
+  },
+  '.showalbumheader__copy, .showalbumheader__download, .showalbumheader__share, .socialshare__download, .showalbumheader__button': {
+    backgroundColor: '#1A1A1D',
+    color: '#FFFFFF'
+  },
+  '.showalbumheader__active': {
+    backgroundColor: '#1A1A1D',
+    color: 'black'
+  },
+  '.showalbumheader__right, .showalbumheader__btn-group': {
+    backgroundColor: '#1A1A1D',
+    color: '#FFFFFF'
+  },
+  '.userfooter__main': {
+    background: 'black',
+    color: 'white'
+  }
 };
 
 async function fetchExchangeRates() {
@@ -372,9 +421,46 @@ const bookmarkManager = new BookmarkManager();
 // --- START DON'T TOUCH ---
 const productCache = new PersistentCache();
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'preferencesUpdated') {
+    Object.assign(PLATFORM_CONFIG, {
+      preferredPlatform: message.preferences.platform,
+      preferredAgent: message.preferences.agent,
+      preferredCurrency: message.preferences.currency
+    });
+  }
+});
+
+function toggleDarkMode() {
+  setTimeout(() => {
+    Object.entries(DARK_MODE_STYLES).forEach(([selector, styles]) => {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(element => {
+        Object.assign(element.style, styles);
+      });
+    });
+  }, 25);
+}
+
+async function initializeDarkMode() {
+  const darkModePreference = await chrome.storage.local.get('darkMode');
+  if (darkModePreference?.enabled) {
+    toggleDarkMode();
+  }
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'darkModeChanged') {
+    if (message.enabled) {
+      toggleDarkMode();
+    } else {
+      window.location.reload();
+    }
+  }
+});
 
 function initializeUI() {
-  document.body.style.backgroundColor = "#f0f8ff";
+  /* document.body.style.backgroundColor = "#f0f8ff";
   
   const buttonContainer = document.createElement("div");
   buttonContainer.style.position = "fixed";
@@ -384,9 +470,9 @@ function initializeUI() {
   buttonContainer.style.gap = "8px";
   buttonContainer.style.zIndex = "10000";
 
-  if (window.location.href.includes('/albums/')) {
+  /* if (window.location.href.includes('/albums/')) {
     const sizeChartButton = document.createElement("div");
-    sizeChartButton.textContent = "📏";  // Or use a chart icon
+    sizeChartButton.textContent = "📏";
     sizeChartButton.style.backgroundColor = "#ffffff";
     sizeChartButton.style.padding = "8px";
     sizeChartButton.style.borderRadius = "50%";
@@ -394,32 +480,43 @@ function initializeUI() {
     sizeChartButton.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
     sizeChartButton.addEventListener('click', showSizeChart);
     buttonContainer.appendChild(sizeChartButton);
-  }
+  } */
 
-  const bookmarkButton = document.createElement("div");
+  /*const bookmarkButton = document.createElement("div");
   bookmarkButton.textContent = "🔖";
   bookmarkButton.style.backgroundColor = "#ffffff";
   bookmarkButton.style.padding = "8px";
   bookmarkButton.style.borderRadius = "50%";
   bookmarkButton.style.cursor = "pointer";
-  bookmarkButton.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
+  bookmarkButton.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";*/
   
-  const settingsButton = document.createElement("div");
+  // Remove comments to add Settings button instead of popup menu
+  /* const settingsButton = document.createElement("div");
   settingsButton.textContent = "⚙️";
   settingsButton.style.backgroundColor = "#ffffff";
   settingsButton.style.padding = "8px";
   settingsButton.style.borderRadius = "50%";
   settingsButton.style.cursor = "pointer";
-  settingsButton.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
-  
+  settingsButton.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)"; */
+
+  /*const darkModeButton = document.createElement('div');
+  darkModeButton.textContent = IS_DARK_MODE_EXPERIMENTAL ? '🌓' : '🌞';
+  darkModeButton.style.backgroundColor = "#ffffff";
+  darkModeButton.style.padding = "8px";
+  darkModeButton.style.borderRadius = "50%";
+  darkModeButton.style.cursor = "pointer";
+  darkModeButton.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
+  darkModeButton.addEventListener('click', toggleDarkMode);
   buttonContainer.appendChild(bookmarkButton);
-  buttonContainer.appendChild(settingsButton);
+  //buttonContainer.appendChild(settingsButton);
+  buttonContainer.appendChild(darkModeButton);
   document.body.appendChild(buttonContainer);
   
-  settingsButton.addEventListener('click', showSettingsPopup);
+  // settingsButton.addEventListener('click', showSettingsPopup);
   bookmarkButton.addEventListener('click', showBookmarksPopup);
 
-  if (DEBUG) {
+  */
+ if (DEBUG) {
     const banner = document.createElement("div");
     banner.textContent = "Debug Mode";
     banner.style.position = "fixed";
@@ -483,6 +580,7 @@ function createPriceBadge() {
   container.appendChild(quickBuyButton);
   return { container, badge, retryButton, quickBuyButton };
 }
+
 // --- END OF DON'T TOUCH ---
 
 /**
@@ -838,8 +936,9 @@ async function initializeExtension() {
   try {
     await productCache.waitForInitialization();
     await loadPreferences();
-    initializeUI();
-    setTimeout(processProducts, 1000);
+    await initializeDarkMode();
+    initializeUI()
+    setTimeout(processProducts, 250);
 
     const style = document.createElement("style");
     style.textContent = `
@@ -941,11 +1040,11 @@ function showSettingsPopup() {
     .settings-overlay {
       position: fixed;
       inset: 0;
-      background-color: rgba(10, 10, 10, 0.3);
-      backdrop-filter: blur(8px);
+      background-color: rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(12px) saturate(180%);
       z-index: 10001;
       opacity: 0;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.3s ease;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -953,157 +1052,184 @@ function showSettingsPopup() {
     
     .settings-popup {
       position: relative;
-      background: #ffffff;
-      padding: 32px;
-      border-radius: 24px;
-      width: 420px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 0;
+      border-radius: 10px;
+      width: 720px;
+      height: 480px;
       box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.18);
       opacity: 0;
-      transform: translateY(16px);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateY(16px) scale(0.98);
+      transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      display: flex;
+      overflow: hidden;
     }
     
+    .settings-sidebar {
+      width: 200px;
+      padding: 24px 0;
+      background: rgba(0, 0, 0, 0.03);
+      border-right: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
     .settings-title {
-      font-size: 24px;
+      font-size: 13px;
       font-weight: 600;
-      color: #111827;
-      margin: 0 0 32px 0;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0 24px;
+      margin-bottom: 16px;
     }
     
     .settings-tabs {
       display: flex;
-      gap: 24px;
-      margin-bottom: 32px;
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 4px;
+      flex-direction: column;
+      gap: 2px;
     }
     
     .settings-tab {
-      padding: 8px 4px;
+      padding: 12px 24px;
       background: transparent;
       border: none;
-      color: #6b7280;
+      color: black;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 500;
+      text-align: left;
       transition: all 0.2s ease;
       position: relative;
     }
     
-    .settings-tab::after {
-      content: '';
-      position: absolute;
-      bottom: -5px;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: #2563eb;
-      transform: scaleX(0);
-      transition: transform 0.2s ease;
-    }
-    
-    .settings-tab:hover {
-      color: #2563eb;
-    }
-    
     .settings-tab.active {
-      color: #2563eb;
+      color: #000;
+      background: rgba(0, 0, 0, 0.06);
     }
     
-    .settings-tab.active::after {
-      transform: scaleX(1);
+    .settings-tab:hover:not(.active) {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    .settings-content {
+      flex: 1;
+      padding: 32px;
+      overflow-y: auto;
     }
     
     .settings-panel {
       display: none;
+      opacity: 0;
+      transform: translateX(20px);
+      transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
     }
     
     .settings-panel.active {
       display: block;
-      animation: fadeIn 0.3s ease;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
+      opacity: 1;
+      transform: translateX(0);
     }
     
     .settings-group {
-      margin-bottom: 24px;
+      margin-bottom: 28px;
     }
     
     .settings-label {
       display: block;
-      font-size: 14px;
-      color: #4b5563;
+      font-size: 13px;
+      color: #666;
       margin-bottom: 8px;
       font-weight: 500;
     }
     
-    .settings-select {
-      width: 100%;
-      padding: 12px 16px;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      font-size: 15px;
-      color: #111827;
-      background-color: #f9fafb;
-      transition: all 0.2s ease;
+    .select-wrapper {
+      position: relative;
       cursor: pointer;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 16px center;
     }
     
-    .settings-select:hover {
-      border-color: #d1d5db;
-      background-color: #f3f4f6;
+    .custom-select {
+      padding: 14px 16px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      font-size: 14px;
+      color: #000;
+      background: #fff;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     
-    .settings-select:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    .custom-select:hover {
+      border-color: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.02);
+    }
+    
+    .custom-select.open {
+      border-color: #007AFF;
+      box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
     }
 
-     .settings-credits {
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 1px solid #e5e7eb;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
+    .custom-select::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-right: 2px solid #666;
+      border-bottom: 2px solid #666;
+      transform: rotate(45deg);
+      transition: transform 0.2s ease;
+      margin-left: 8px;
+    }
 
-  .settings-credits img {
-    width: 60px;
-    height: auto;
-    opacity: 0.9;
-  }
-
-  .settings-credits-text {
-    color: #6b7280;
-    font-size: 13px;
-    line-height: 1.5;
-    text-align: left;
-  }
-
-  .settings-credits a {
-    color: #2563eb;
-    text-decoration: none;
-    transition: color 0.2s ease;
-  }
-
-  .settings-credits a:hover {
-    color: #1d4ed8;
-  }
-  
+    .custom-select.open::after {
+      transform: rotate(-135deg);
+    }
     
+    .select-options {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+      transition: all 0.2s ease;
+      z-index: 1;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    
+    .select-options.open {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+    
+    .select-option {
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #000;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    
+    .select-option:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+    
+    .select-option.selected {
+      color: #007AFF;
+      background: rgba(0, 122, 255, 0.06);
+    }
+
     .cache-stats {
-      background: #f9fafb;
+      background: rgba(0, 0, 0, 0.02);
       border-radius: 16px;
-      padding: 20px;
+      padding: 24px;
       margin-bottom: 24px;
     }
     
@@ -1111,13 +1237,13 @@ function showSettingsPopup() {
       display: flex;
       justify-content: space-between;
       padding: 8px 0;
-      font-size: 14px;
-      color: #4b5563;
+      font-size: 13px;
+      color: #666;
     }
     
     .cache-stat-value {
       font-weight: 500;
-      color: #111827;
+      color: #000;
     }
     
     .cache-actions {
@@ -1128,66 +1254,102 @@ function showSettingsPopup() {
     
     .cache-button {
       padding: 12px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgba(0, 0, 0, 0.1);
       border-radius: 12px;
-      background: #ffffff;
-      color: #111827;
-      font-size: 14px;
+      background: #fff;
+      color: #000;
+      font-size: 13px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
     }
     
     .cache-button:hover {
-      border-color: #2563eb;
-      color: #2563eb;
-      background: #f8faff;
+      border-color: #007AFF;
+      color: #007AFF;
+      background: rgba(0, 122, 255, 0.06);
     }
     
     .cache-button.danger {
-      border-color: #ef4444;
-      color: #ef4444;
+      border-color: #FF3B30;
+      color: #FF3B30;
     }
     
     .cache-button.danger:hover {
-      background: #fef2f2;
+      background: rgba(255, 59, 48, 0.06);
     }
     
     .settings-buttons {
       display: flex;
       justify-content: flex-end;
       gap: 12px;
-      margin-top: 32px;
+      margin-top: 28px;
       padding-top: 24px;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
     }
     
     .settings-button {
-      padding: 12px 24px;
-      border: none;
-      border-radius: 12px;
-      font-size: 15px;
+  padding: 7 14px; /* More padding for a comfortable touch target */
+  border: none;
+  border-radius: 16px; /* Softer, more modern border radius */
+  font-size: 15px; /* Slightly larger font for better readability */
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease; /* Smoother transition duration */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+.settings-button-save {
+  background-color: #0A84FF; /* iOS-style blue */
+  color: white;
+}
+
+.settings-button-save:hover {
+  background-color: #007AFF; /* Slightly darker on hover for contrast */
+  box-shadow: 0 4px 8px rgba(0, 122, 255, 0.3); /* Enhanced shadow on hover */
+}
+
+.settings-button-cancel {
+  background-color: #F2F2F7; /* iOS-style light background */
+  color: #1C1C1E; /* Neutral dark text */
+}
+
+.settings-button-cancel:hover {
+  background-color: #E5E5EA; /* Subtle hover effect */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* Light shadow for consistency */
+}
+
+    .settings-credits {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .settings-credits img {
+      width: 48px;
+      height: auto;
+      opacity: 0.9;
+      border-radius: 8px;
+    }
+
+    .settings-credits-text {
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .settings-credits a {
+      color: #007AFF;
+      text-decoration: none;
+      transition: color 0.2s ease;
       font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
     }
-    
-    .settings-button-save {
-      background-color: #2563eb;
-      color: white;
-    }
-    
-    .settings-button-save:hover {
-      background-color: #1d4ed8;
-    }
-    
-    .settings-button-cancel {
-      background-color: #f3f4f6;
-      color: #4b5563;
-    }
-    
-    .settings-button-cancel:hover {
-      background-color: #e5e7eb;
+
+    .settings-credits a:hover {
+      color: #0066CC;
     }
   `;
   document.head.appendChild(style);
@@ -1198,13 +1360,19 @@ function showSettingsPopup() {
   const popup = document.createElement('div');
   popup.className = 'settings-popup';
 
+  const sidebar = document.createElement('div');
+  sidebar.className = 'settings-sidebar';
+
   const title = document.createElement('h2');
   title.className = 'settings-title';
   title.textContent = 'Settings';
 
   const tabs = document.createElement('div');
   tabs.className = 'settings-tabs';
-  
+
+  const content = document.createElement('div');
+  content.className = 'settings-content';
+
   const createTab = (label, isActive = false) => {
     const tab = document.createElement('button');
     tab.className = `settings-tab ${isActive ? 'active' : ''}`;
@@ -1221,92 +1389,122 @@ function showSettingsPopup() {
   const generalPanel = document.createElement('div');
   generalPanel.className = 'settings-panel active';
 
-  const platformGroup = document.createElement('div');
-  platformGroup.className = 'settings-group';
-  
-  const platformLabel = document.createElement('label');
-  platformLabel.className = 'settings-label';
-  platformLabel.textContent = 'Preferred Platform';
-  
-  const platformSelect = document.createElement('select');
-  platformSelect.className = 'settings-select';
-  Object.keys(PLATFORM_CONFIG.platforms).forEach(platform => {
-    const option = document.createElement('option');
-    option.value = platform;
-    option.textContent = platform.charAt(0).toUpperCase() + platform.slice(1);
-    option.selected = platform === PLATFORM_CONFIG.preferredPlatform;
-    platformSelect.appendChild(option);
-  });
+  const createCustomSelect = (label, options, selectedValue, onChange) => {
+    const group = document.createElement('div');
+    group.className = 'settings-group';
+    
+    const labelEl = document.createElement('label');
+    labelEl.className = 'settings-label';
+    labelEl.textContent = label;
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'select-wrapper';
+    
+    const select = document.createElement('div');
+    select.className = 'custom-select';
+    
+    const selectedOption = options.find(opt => opt.value === selectedValue);
+    select.textContent = selectedOption?.label || 'Select...';
+    
+    const optionsList = document.createElement('div');
+    optionsList.className = 'select-options';
+    
+    options.forEach(option => {
+      const optionEl = document.createElement('div');
+      optionEl.className = `select-option ${option.value === selectedValue ? 'selected' : ''}`;
+      optionEl.textContent = option.label;
+      
+      optionEl.addEventListener('click', () => {
+        select.textContent = option.label;
+        onChange(option.value);
+        closeSelect();
+        
+        optionsList.querySelectorAll('.select-option').forEach(el => {
+          el.classList.toggle('selected', el === optionEl);
+        });
+      });
+      
+      optionsList.appendChild(optionEl);
+    });
+    
+    const closeSelect = () => {
+      select.classList.remove('open');
+      optionsList.classList.remove('open');
+      document.removeEventListener('click', handleOutsideClick);
+    };
+    
+    const handleOutsideClick = (e) => {
+      if (!wrapper.contains(e.target)) {
+        closeSelect();
+      }
+    };
+    
+    select.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = select.classList.contains('open');
+      
+      if (isOpen) {
+        closeSelect();
+      } else {
+        select.classList.add('open');
+        optionsList.classList.add('open');
+        document.addEventListener('click', handleOutsideClick);
+      }
+    });
+    
+    wrapper.appendChild(select);
+    wrapper.appendChild(optionsList);
+    group.appendChild(labelEl);
+    group.appendChild(wrapper);
+    
+    return group;
+  };
 
-  const agentGroup = document.createElement('div');
-  agentGroup.className = 'settings-group';
-  
-  const agentLabel = document.createElement('label');
-  agentLabel.className = 'settings-label';
-  agentLabel.textContent = 'Preferred Agent';
-  
-  const agentSelect = document.createElement('select');
-  agentSelect.className = 'settings-select';
-  Object.keys(PLATFORM_CONFIG.agents).forEach(agent => {
-    const option = document.createElement('option');
-    option.value = agent;
-    option.textContent = agent.charAt(0).toUpperCase() + agent.slice(1);
-    option.selected = agent === PLATFORM_CONFIG.preferredAgent;
-    agentSelect.appendChild(option);
-  });
+  let selectedPlatform = PLATFORM_CONFIG.preferredPlatform;
+  let selectedAgent = PLATFORM_CONFIG.preferredAgent;
+  let selectedCurrency = PLATFORM_CONFIG.preferredCurrency;
 
-  const currencyGroup = document.createElement('div');
-  currencyGroup.className = 'settings-group';
-  
-  const currencyLabel = document.createElement('label');
-  currencyLabel.className = 'settings-label';
-  currencyLabel.textContent = 'Preferred Currency';
-  
-  const currencySelect = document.createElement('select');
-  currencySelect.className = 'settings-select';
-  
-  const currencies = [
+  const platformOptions = Object.keys(PLATFORM_CONFIG.platforms).map(platform => ({
+    value: platform,
+    label: platform.charAt(0).toUpperCase() + platform.slice(1)
+  }));
+
+  const agentOptions = Object.keys(PLATFORM_CONFIG.agents).map(agent => ({
+    value: agent,
+    label: agent.charAt(0).toUpperCase() + agent.slice(1)
+  }));
+
+  const currencyOptions = [
     { value: 'usd', label: 'USD ($)' },
     { value: 'eur', label: 'EUR (€)' },
     { value: 'gbp', label: 'GBP (£)' },
     { value: 'try', label: 'TRY (₺)' }
   ];
 
-  currencies.forEach(currency => {
-    const option = document.createElement('option');
-    option.value = currency.value;
-    option.textContent = currency.label;
-    option.selected = currency.value === PLATFORM_CONFIG.preferredCurrency;
-    currencySelect.appendChild(option);
-  });
+  const platformSelect = createCustomSelect(
+    'Preferred Platform',
+    platformOptions,
+    selectedPlatform,
+    value => selectedPlatform = value
+  );
 
-  const creditsSection = document.createElement('div');
-  creditsSection.className = 'settings-credits';
+  const agentSelect = createCustomSelect(
+    'Preferred Agent',
+    agentOptions,
+    selectedAgent,
+    value => selectedAgent = value
+  );
 
-  const logo = document.createElement('img');
-  logo.src = chrome.runtime.getURL('static/jadeship.png');
-  logo.alt = 'Jadeship Logo';
+  const currencySelect = createCustomSelect(
+    'Preferred Currency',
+    currencyOptions,
+    selectedCurrency,
+    value => selectedCurrency = value
+  );
 
-  const creditsText = document.createElement('div');
-  creditsText.className = 'settings-credits-text';
-  creditsText.innerHTML = `
-    Made by <a href="https://github.com/1etu" target="_blank">etulastrada</a><br>
-    Powered by <a href="https://jadeship.com" target="_blank">Jadeship</a>
-  `;
-
-  creditsSection.appendChild(logo);
-  creditsSection.appendChild(creditsText);
-
-
-  platformGroup.appendChild(platformLabel);
-  platformGroup.appendChild(platformSelect);
-  agentGroup.appendChild(agentLabel);
-  agentGroup.appendChild(agentSelect);
-  currencyGroup.appendChild(currencyLabel);
-  currencyGroup.appendChild(currencySelect);
-  generalPanel.appendChild(platformGroup);
-  generalPanel.appendChild(agentGroup);
-  generalPanel.appendChild(currencyGroup);
+  generalPanel.appendChild(platformSelect);
+  generalPanel.appendChild(agentSelect);
+  generalPanel.appendChild(currencySelect);
 
   const cachePanel = document.createElement('div');
   cachePanel.className = 'settings-panel';
@@ -1427,7 +1625,7 @@ function showSettingsPopup() {
 
   const saveButton = document.createElement('button');
   saveButton.className = 'settings-button settings-button-save';
-  saveButton.textContent = 'Save Changes';
+  saveButton.textContent = 'Save';
 
   const cancelButton = document.createElement('button');
   cancelButton.className = 'settings-button settings-button-cancel';
@@ -1436,9 +1634,30 @@ function showSettingsPopup() {
   buttonContainer.appendChild(cancelButton);
   buttonContainer.appendChild(saveButton);
 
+  const creditsSection = document.createElement('div');
+  creditsSection.className = 'settings-credits';
+
+  const logo = document.createElement('img');
+  logo.src = chrome.runtime.getURL('static/jadeship.png');
+  logo.alt = 'Jadeship Logo';
+
+  const creditsText = document.createElement('div');
+  creditsText.className = 'settings-credits-text';
+  creditsText.innerHTML = `
+    Made by <a href="https://github.com/1etu" target="_blank">etulastrada</a><br>
+    Powered by <a href="https://jadeship.com" target="_blank">Jadeship</a>
+  `;
+
+  creditsSection.appendChild(logo);
+  creditsSection.appendChild(creditsText);
+
   const switchTab = (tab, panel) => {
-    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+    const allTabs = document.querySelectorAll('.settings-tab');
+    const allPanels = document.querySelectorAll('.settings-panel');
+    
+    allTabs.forEach(t => t.classList.remove('active'));
+    allPanels.forEach(p => p.classList.remove('active'));
+    
     tab.classList.add('active');
     panel.classList.add('active');
   };
@@ -1446,25 +1665,28 @@ function showSettingsPopup() {
   generalTab.addEventListener('click', () => switchTab(generalTab, generalPanel));
   cacheTab.addEventListener('click', () => switchTab(cacheTab, cachePanel));
 
-  popup.appendChild(title);
-  popup.appendChild(tabs);
-  popup.appendChild(generalPanel);
-  popup.appendChild(cachePanel);
-  popup.appendChild(buttonContainer);
-  popup.appendChild(creditsSection);
+  sidebar.appendChild(title);
+  sidebar.appendChild(tabs);
+  content.appendChild(generalPanel);
+  content.appendChild(cachePanel);
+  content.appendChild(buttonContainer);
+  content.appendChild(creditsSection);
+  
+  popup.appendChild(sidebar);
+  popup.appendChild(content);
   overlay.appendChild(popup);
   document.body.appendChild(overlay);
 
   requestAnimationFrame(() => {
     overlay.style.opacity = '1';
     popup.style.opacity = '1';
-    popup.style.transform = 'translateY(0)';
+    popup.style.transform = 'translateY(0) scale(1)';
   });
 
   const closePopup = () => {
     overlay.style.opacity = '0';
     popup.style.opacity = '0';
-    popup.style.transform = 'translateY(16px)';
+    popup.style.transform = 'translateY(16px) scale(0.98)';
     setTimeout(() => {
       document.body.removeChild(overlay);
       document.head.removeChild(style);
@@ -1472,7 +1694,7 @@ function showSettingsPopup() {
   };
 
   saveButton.addEventListener('click', async () => {
-    await savePreferences(platformSelect.value, agentSelect.value, currencySelect.value);
+    await savePreferences(selectedPlatform, selectedAgent, selectedCurrency);
     closePopup();
   });
 
@@ -1480,6 +1702,10 @@ function showSettingsPopup() {
   
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) closePopup();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closePopup();
   });
 }
 
@@ -1667,3 +1893,69 @@ function showBookmarksPopup() {
     if (e.target === overlay) closePopup();
   });
 }
+
+
+function toggleDarkMode() {
+  if (!IS_DARK_MODE_EXPERIMENTAL) {
+    return;
+  };
+  
+  setTimeout(() => {
+    const darkModeStyles = {
+      body: {
+        backgroundColor: '#1A1A1D',
+        color: '#FFFFFF'
+      },
+      '.none_select.header__wrap': {
+        backgroundColor: '#000000'
+      },
+      '.showheader__headerWrap': {
+        backgroundColor: '#1A1A1D',
+        color: '#FFFFFF'
+      },
+      '.broadcastbar__wrap': {
+        backgroundColor: '#1A1A1D',
+        color: '#FFFFFF',
+        borderTop: '1px solid #2A2A2D'
+      },
+      '.pagination__button, .pagination__number, .pagination__number.pagination__active': {
+        backgroundColor: '#1A1A1D',
+        color: '#FFFFFF'
+      },
+      '.showheader__menuslink.showheader__active': {
+        backgroundColor: '#1A1A1D',
+        color: 'white'
+      },
+      '.showheader__category': {
+        backgroundColor: '#1A1A1D',
+        background: '#1A1A1D',
+        color: 'white'
+      },
+      '.showalbumheader__copy, .showalbumheader__download, .showalbumheader__share, .socialshare__download, .showalbumheader__button': {
+        backgroundColor: '#1A1A1D',
+        color: '#FFFFFF'
+      },
+      '.showalbumheader__active': {
+        backgroundColor: '#1A1A1D',
+        color: 'black'
+      },
+      '.showalbumheader__right, .showalbumheader__btn-group': {
+        backgroundColor: '#1A1A1D',
+        color: '#FFFFFF'
+      },
+      '.userfooter__main': {
+        background: 'black',
+        color: 'white'
+      }
+    };
+
+    Object.entries(darkModeStyles).forEach(([selector, styles]) => {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(element => {
+        Object.assign(element.style, styles);
+      });
+    });
+  }, 25);
+}
+
+toggleDarkMode()
